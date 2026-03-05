@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calorie Burn Predictor</title>
+    <title>Calorie Burn & AI Recovery Coach</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -36,11 +36,12 @@
             justify-content: center;
             padding: 2rem;
             margin: 0;
+            position: relative;
         }
 
         .container {
             width: 100%;
-            max-width: 540px;
+            max-width: 580px;
             backdrop-filter: blur(12px);
             background: rgba(0, 0, 0, 0.4);
             border-radius: 24px;
@@ -126,6 +127,10 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         button:hover {
@@ -153,23 +158,157 @@
         }
 
         .calories {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: 700;
             color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.5rem;
         }
 
         .cal-label {
             color: var(--text-muted);
             font-size: 0.85rem;
-            margin-top: 0.25rem;
+        }
+
+        /* AI Coach Section */
+        .ai-analysis {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(18, 18, 26, 0.8);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            border-radius: var(--radius);
+            text-align: left;
+            display: none;
+        }
+
+        .ai-analysis p,
+        .ai-analysis li {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.8rem;
+        }
+
+        .ai-analysis ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .loading-shimmer {
+            height: 20px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Settings Modal */
+        .settings-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface-2);
+            padding: 2rem;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .modal h2 {
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .modal p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal input {
+            width: 100%;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
 
 <body>
+    <button class="settings-btn" onclick="openModal()">⚙️</button>
+
+    <div class="modal-overlay" id="api-modal">
+        <div class="modal">
+            <h2>Gemini AI Coach Setup</h2>
+            <p>Enter a free Google Gemini API Key to enable personalized post-workout recovery and nutrition plans.</p>
+            <div class="field">
+                <input type="password" id="gemini-key" placeholder="AIzaSy...">
+            </div>
+            <button onclick="saveApiKey()">Save Key</button>
+            <p style="margin-top:1rem; font-size:0.75rem;"><a href="https://aistudio.google.com/app/apikey"
+                    target="_blank" style="color:var(--accent);">Get a free key here</a></p>
+        </div>
+    </div>
+
     <div class="container">
-        <h1>🔥 Calorie Burn Predictor</h1>
-        <p class="subtitle">XGBoost fitness model (Vercel Frontend Demo)</p>
+        <h1>🔥 AI Fitness & Recovery Coach</h1>
+        <p class="subtitle">Predict calories and generate instant AI recovery protocols.</p>
         <form id="form">
             <div class="card">
                 <div class="row">
@@ -198,49 +337,115 @@
                 <div class="row">
                     <div class="field">
                         <label>Exercise Duration (min)</label>
-                        <input type="number" id="duration" value="30" min="1" max="300">
+                        <input type="number" id="duration" value="45" min="1" max="300">
                     </div>
                     <div class="field">
-                        <label>Heart Rate (bpm)</label>
-                        <input type="number" id="heart_rate" value="110" min="40" max="220">
+                        <label>Avg Heart Rate (bpm)</label>
+                        <input type="number" id="heart_rate" value="135" min="40" max="220">
                     </div>
                 </div>
-                <div class="field">
+                <div class="field" style="display:none;">
                     <label>Body Temperature (°C)</label>
                     <input type="number" id="body_temp" value="37.0" min="35" max="42" step="0.1">
                 </div>
             </div>
-            <button type="submit">🔥 Predict Calories</button>
+            <button type="submit" id="submit-btn">⚡ Predict & Plan Recovery</button>
         </form>
+
         <div class="result" id="result">
             <div class="calories" id="cal-value">—</div>
             <div class="cal-label">Estimated Calories Burned</div>
         </div>
+
+        <div class="ai-analysis" id="ai-analysis">
+            <div class="ai-header">🤖 Personalized AI Recovery Protocol</div>
+            <div id="ai-content"></div>
+        </div>
     </div>
+
     <script>
+        // API Key Management
+        function openModal() {
+            document.getElementById('api-modal').classList.add('show');
+            document.getElementById('gemini-key').value = localStorage.getItem('gemini_api_key') || '';
+        }
+        function saveApiKey() {
+            const key = document.getElementById('gemini-key').value;
+            if (key) localStorage.setItem('gemini_api_key', key);
+            document.getElementById('api-modal').classList.remove('show');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('gemini_api_key')) openModal();
+        });
+
         document.getElementById('form').addEventListener('submit', async e => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerHTML;
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return openModal();
+
+            const btn = document.getElementById('submit-btn');
             btn.disabled = true;
-            btn.innerHTML = '🔄 Calculating...';
+            btn.innerHTML = '🔄 Processing...';
 
-            // Mock backend response for static frontend deployment
-            setTimeout(() => {
-                const duration = +document.getElementById('duration').value;
-                const weight = +document.getElementById('weight').value;
-                const heart_rate = +document.getElementById('heart_rate').value;
+            // 1. Calculate Baseline Calories Burned (Heuristic)
+            const age = +document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            const weight = +document.getElementById('weight').value;
+            const duration = +document.getElementById('duration').value;
+            const heartRate = +document.getElementById('heart_rate').value;
 
-                // Simple heuristic logic for the mock prediction to seem somewhat realistic
-                // MET calculation approximation
-                let calories = (duration * (heart_rate / 15) * weight) / 30;
+            let calories = 0;
+            if (gender === 'male') {
+                calories = ((-55.0969 + (0.6309 * heartRate) + (0.1988 * weight) + (0.2017 * age)) / 4.184) * duration;
+            } else {
+                calories = ((-20.4022 + (0.4472 * heartRate) - (0.1263 * weight) + (0.074 * age)) / 4.184) * duration;
+            }
+            if (calories < 0) calories = (duration * (heartRate / 15) * weight) / 30; // Fallback
 
-                document.getElementById('cal-value').textContent = calories.toFixed(1) + ' kcal';
-                document.getElementById('result').classList.add('show');
+            document.getElementById('cal-value').textContent = Math.round(calories);
+            document.getElementById('result').classList.add('show');
 
+            // 2. Trigger Gemini Recovery Coach
+            const aiSection = document.getElementById('ai-analysis');
+            const aiContent = document.getElementById('ai-content');
+            aiSection.style.display = 'block';
+            aiContent.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="width:80%"></div><div class="loading-shimmer" style="width:60%"></div><p style="color:var(--accent); font-size:0.85rem; margin-top:1rem;">Agent designing your custom recovery protocol...</p>';
+
+            try {
+                // Formatting the prompt for an optimal workout recovery
+                const prompt = `Act as an elite sports nutritionist and fitness coach. Your client is a ${age}-year-old ${gender} weighing ${weight}kg. They just completed a ${duration}-minute workout with an average heart rate of ${heartRate} bpm, burning approximately ${Math.round(calories)} calories.
+                
+                Please generate a highly personalized, immediate post-workout recovery protocol. Include:
+                1. Hydration strategy (specific ounces/ml)
+                2. Optimal macronutrient split for their upcoming meal (Protein/Carb ratio)
+                3. One actionable tip for muscle recovery based on their exertion level.
+                
+                Format the response cleanly with HTML tags (<b>, <ul>, <li>, <br>) so it renders beautifully in a web UI. Keep it strict, encouraging, and under 150 words. Do not use markdown backticks around the HTML.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                let text = data.candidates[0].content.parts[0].text;
+                // Clean up any potential markdown formatting the LLM might have improperly added
+                text = text.replace(/```html/g, '').replace(/```/g, '');
+
+                aiContent.innerHTML = text;
+
+            } catch (err) {
+                aiContent.innerHTML = `<p style="color:#ff4d6a;">❌ Agent Error: ${err.message}. Make sure your API key is valid.</p>`;
+            } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
-            }, 750);
+                btn.innerHTML = '⚡ Predict & Plan Recovery';
+            }
         });
     </script>
 </body>
