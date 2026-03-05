@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calorie Burn Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface-2: #1a1a2e;
+            --accent: #f97316;
+            --accent-glow: rgba(249, 115, 22, 0.12);
+            --text: #e8e8f0;
+            --text-muted: #8888a0;
+            --border: rgba(255, 255, 255, 0.06);
+            --radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f url('/static/bg.png') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 540px;
+            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+            padding: 2.5rem;
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .card {
+            background: rgba(18, 18, 26, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(26, 26, 46, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: rgba(26, 26, 46, 0.7);
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent), #ea580c);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px var(--accent-glow);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+            margin-top: 1.5rem;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .calories {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .cal-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔥 Calorie Burn Predictor</h1>
+        <p class="subtitle">XGBoost fitness model (Vercel Frontend Demo)</p>
+        <form id="form">
+            <div class="card">
+                <div class="row">
+                    <div class="field">
+                        <label>Gender</label>
+                        <select id="gender">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Age</label>
+                        <input type="number" id="age" value="28" min="10" max="100">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="field">
+                        <label>Height (cm)</label>
+                        <input type="number" id="height" value="175" min="100" max="250" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label>Weight (kg)</label>
+                        <input type="number" id="weight" value="70" min="30" max="200" step="0.1">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="field">
+                        <label>Exercise Duration (min)</label>
+                        <input type="number" id="duration" value="30" min="1" max="300">
+                    </div>
+                    <div class="field">
+                        <label>Heart Rate (bpm)</label>
+                        <input type="number" id="heart_rate" value="110" min="40" max="220">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Body Temperature (°C)</label>
+                    <input type="number" id="body_temp" value="37.0" min="35" max="42" step="0.1">
+                </div>
+            </div>
+            <button type="submit">🔥 Predict Calories</button>
+        </form>
+        <div class="result" id="result">
+            <div class="calories" id="cal-value">—</div>
+            <div class="cal-label">Estimated Calories Burned</div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '🔄 Calculating...';
+
+            // Mock backend response for static frontend deployment
+            setTimeout(() => {
+                const duration = +document.getElementById('duration').value;
+                const weight = +document.getElementById('weight').value;
+                const heart_rate = +document.getElementById('heart_rate').value;
+
+                // Simple heuristic logic for the mock prediction to seem somewhat realistic
+                // MET calculation approximation
+                let calories = (duration * (heart_rate / 15) * weight) / 30;
+
+                document.getElementById('cal-value').textContent = calories.toFixed(1) + ' kcal';
+                document.getElementById('result').classList.add('show');
+
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }, 750);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+*.py
+*.pyc
+requirements.txt
+*.csv
+*.pkl
+*.ipynb
