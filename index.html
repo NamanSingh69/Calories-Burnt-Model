@@ -365,8 +365,12 @@
             e.preventDefault();
 
             if (!window.gemini.hasApiKey()) {
-                alert("Please enter your Gemini API Key in the settings panel first.");
-                return;
+                console.warn("No API key available. Will calculate calories but skip AI recovery protocol.");
+                document.getElementById('ai-analysis').style.display = 'none';
+
+                // Still do the basic calculation below
+            } else {
+                document.getElementById('ai-analysis').style.display = 'block';
             }
 
             const btn = document.getElementById('submit-btn');
