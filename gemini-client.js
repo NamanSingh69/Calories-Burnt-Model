@@ -174,124 +174,213 @@ class GeminiClient {
         if (!container) return;
 
         // Don't inject twice
-        if (document.getElementById("gemini-client-ui")) return;
+        if (document.getElementById("gemini-client-ui-container")) return;
 
         const uiHtml = `
-            <div id="gemini-client-ui" style="
-                position: fixed; bottom: 20px; right: 20px;
-                background: rgba(15, 23, 42, 0.95);
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255,255,255,0.1);
-                border-radius: 12px;
-                padding: 16px;
-                color: #f1f5f9;
-                font-family: system-ui, -apple-system, sans-serif;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                z-index: 9999;
-                min-width: 250px;
-            ">
+            <div id="gemini-client-ui-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;">
                 <style>
-                    #gemini-client-ui input, #gemini-client-ui select {
-                        width: 100%; box-sizing: border-box;
-                        background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
-                        color: white; padding: 8px; border-radius: 6px; margin-top: 6px;
-                        font-size: 13px;
+                    #gemini-floating-btn {
+                        width: 50px; height: 50px; border-radius: 50%; background: #1e293b; 
+                        border: 2px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                        cursor: pointer; display: flex; align-items: center; justify-content: center;
+                        transition: all 0.2s; position: absolute; bottom: 0; right: 0;
+                        color: white; z-index: 10000;
                     }
-                    #gemini-client-ui button {
+                    #gemini-floating-btn:hover { transform: scale(1.05); border-color: #3b82f6; }
+                    
+                    #gemini-client-ui {
+                        position: absolute; bottom: 60px; right: 0;
+                        background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+                        padding: 16px; color: #f1f5f9; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                        width: 280px; display: none; flex-direction: column; opacity: 0;
+                        transition: opacity 0.2s;
+                    }
+                    #gemini-client-ui.show { display: flex; opacity: 1; }
+                    
+                    #gemini-client-ui input, #gemini-client-ui select {
+                        width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); 
+                        border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; 
+                        border-radius: 6px; margin-top: 6px; font-size: 13px; outline:none;
+                    }
+                    #gemini-client-ui input:focus { border-color: #3b82f6; }
+                    #gemini-client-ui button.save-btn {
                         width: 100%; margin-top: 10px; padding: 8px;
                         background: #3b82f6; border: none; color: white;
                         border-radius: 6px; cursor: pointer; font-weight: 600;
                     }
-                    #gemini-client-ui button:hover { background: #2563eb; }
+                    #gemini-client-ui button.save-btn:hover { background: #2563eb; }
                     #gemini-status { font-size: 12px; margin-top: 8px; color: #94a3b8; }
+                    
+                    /* Custom Searchable Dropdown */
+                    .gemini-dropdown { position: relative; margin-top: 6px; }
+                    .gemini-dropdown-input { width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; outline:none; font-size:13px;}
+                    .gemini-dropdown-list { 
+                        position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; 
+                        border: 1px solid #334155; border-radius: 6px; max-height: 150px; overflow-y: auto; 
+                        display: none; z-index: 100; margin-top:4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    }
+                    .gemini-dropdown-list.show { display: block; }
+                    .gemini-dropdown-item { padding: 8px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #334155; }
+                    .gemini-dropdown-item:hover { background: #3b82f6; }
                 </style>
-                <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
-                    ✨ Gemini Engine
-                    <span id="gemini-key-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: ${this.hasApiKey() ? '#10b981' : '#ef4444'};"></span>
-                </div>
                 
-                <div>
-                    <label style="font-size: 11px; color: #94a3b8;">API Key</label>
-                    <input type="password" id="gemini-ui-key" placeholder="${this.isUsingDefaultKey ? 'Using Default Public Key' : 'AIza...'}" value="${this.isUsingDefaultKey ? '' : this.apiKey.replace(/./g, '*')}" 
-                           onfocus="this.value='${this.isUsingDefaultKey ? '' : this.apiKey}'" onblur="if(this.value) this.value=this.value.replace(/./g, '*')">
-                    <div style="font-size: 10px; color: #64748b; margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>Leave blank for default.</span>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 4px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-                            </svg>
-                            Login with Google
-                        </a>
-                    </div>
+                <div id="gemini-floating-btn" title="AI Configuration">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
 
-                <div style="margin-top: 10px;">
-                    <label style="font-size: 11px; color: #94a3b8;">Active Model</label>
-                    <select id="gemini-ui-model">
-                        <option value="${this.selectedModel}">${this.selectedModel || 'Loading models...'}</option>
-                    </select>
+                <div id="gemini-client-ui">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                        ✨ Gemini Engine
+                        <span id="gemini-key-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: ${this.hasApiKey() ? '#10b981' : '#ef4444'};"></span>
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px;">API Key Configuration</label>
+                        <input type="password" id="gemini-ui-key" placeholder="${this.isUsingDefaultKey ? 'Using Default Public Key' : 'AIza...'}" value="${this.isUsingDefaultKey ? '' : this.apiKey.replace(/./g, '*')}" 
+                               onfocus="this.value='${this.isUsingDefaultKey ? '' : this.apiKey}'" onblur="if(this.value) this.value=this.value.replace(/./g, '*')">
+                        
+                        <div style="font-size: 10px; color: #64748b; margin-top: 8px; line-height: 1.4;">
+                            <span>Operating with public fallback key. If you reach quota limits:</span>
+                            <a href="https://aistudio.google.com/app/apikey" target="_blank" 
+                               style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #ffffff; color: #3c4043; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: 500; font-family: 'Roboto', sans-serif; transition: background 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                </svg>
+                                Login with Google Auth
+                            </a>
+                        </div>
+                    </div>
+    
+                    <div style="margin-top: 15px;">
+                        <label style="font-size: 11px; color: #94a3b8;">Active Model Setup</label>
+                        <div class="gemini-dropdown">
+                            <input type="text" id="gemini-search-input" class="gemini-dropdown-input" placeholder="Search models..." value="${this.selectedModel}">
+                            <div id="gemini-dropdown-list" class="gemini-dropdown-list"></div>
+                        </div>
+                    </div>
+                    
+                    <button id="gemini-ui-save" class="save-btn">Save & Connect</button>
+                    <div id="gemini-status"></div>
                 </div>
-                
-                <button id="gemini-ui-save">Save & Connect</button>
-                <div id="gemini-status"></div>
             </div>
         `;
 
-        if (containerId) {
-            container.innerHTML += uiHtml;
-        } else {
-            document.body.insertAdjacentHTML('beforeend', uiHtml);
-        }
+        container.insertAdjacentHTML('beforeend', uiHtml);
 
-        // Attach events
+        const btn = document.getElementById('gemini-floating-btn');
+        const panel = document.getElementById('gemini-client-ui');
+        const searchInput = document.getElementById('gemini-search-input');
+        const listDiv = document.getElementById('gemini-dropdown-list');
+
+        // Toggle Panel
+        btn.addEventListener('click', () => {
+            panel.classList.toggle('show');
+            if (panel.classList.contains('show') && this.availableModels.length === 0 && this.hasApiKey()) {
+                document.getElementById('gemini-status').innerHTML = "Fetching models...";
+                this.discoverModels().then(models => this._populateDropdownUI(models)).catch(err => {
+                    document.getElementById('gemini-status').innerHTML = `<span style="color:#ef4444">${err.message}</span>`;
+                });
+            }
+        });
+
+        // Searchable Dropdown Logic
+        const updateDropdown = (query = "") => {
+            listDiv.innerHTML = '';
+            const filtered = this.availableModels.filter(m => m.name.toLowerCase().includes(query.toLowerCase()));
+
+            if (filtered.length === 0) {
+                listDiv.innerHTML = `<div style="padding:8px; font-size:12px; color:#94a3b8;">No matches.</div>`;
+            }
+
+            filtered.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'gemini-dropdown-item';
+                item.textContent = m.name;
+                item.addEventListener('click', () => {
+                    searchInput.value = m.name;
+                    this.selectedModel = m.name;
+                    localStorage.setItem("gemini_selected_model", m.name);
+                    listDiv.classList.remove('show');
+                });
+                listDiv.appendChild(item);
+            });
+        };
+
+        searchInput.addEventListener('focus', () => {
+            listDiv.classList.add('show');
+            updateDropdown(searchInput.value);
+        });
+
+        searchInput.addEventListener('input', (e) => updateDropdown(e.target.value));
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !listDiv.contains(e.target)) {
+                listDiv.classList.remove('show');
+            }
+            if (!panel.contains(e.target) && !btn.contains(e.target)) {
+                panel.classList.remove('show');
+            }
+        });
+
+        // Save Button
         document.getElementById('gemini-ui-save').addEventListener('click', async () => {
             const keyInput = document.getElementById('gemini-ui-key').value;
-            // Only update if it's not the masked version
             if (!keyInput.includes('*') && keyInput !== this.apiKey) {
                 if (keyInput.trim() === '') {
                     this.setApiKey(DEFAULT_FALLBACK_KEY);
                     this.isUsingDefaultKey = true;
-                    localStorage.removeItem(this.storageKey); // Clear local storage to revert to default
+                    localStorage.removeItem(this.storageKey);
                 } else {
                     this.setApiKey(keyInput);
                     this.isUsingDefaultKey = false;
                 }
             }
 
+            const typedModel = searchInput.value.trim();
+            if (typedModel) {
+                this.selectedModel = typedModel;
+                localStorage.setItem("gemini_selected_model", typedModel);
+            }
+
             const status = document.getElementById('gemini-status');
             status.innerHTML = "Connecting...";
-            document.getElementById('gemini-key-indicator').style.background = '#eab308'; // yellow
+            document.getElementById('gemini-key-indicator').style.background = '#eab308';
 
             try {
                 const models = await this.discoverModels();
-                this._populateDropdown(models);
+                this._populateDropdownUI(models);
                 status.innerHTML = `<span style="color:#10b981">Connected! Found ${models.length} models.</span>`;
-                document.getElementById('gemini-key-indicator').style.background = '#10b981'; // green
+                document.getElementById('gemini-key-indicator').style.background = '#10b981';
             } catch (err) {
                 status.innerHTML = `<span style="color:#ef4444">${err.message}</span>`;
-                document.getElementById('gemini-key-indicator').style.background = '#ef4444'; // red
+                document.getElementById('gemini-key-indicator').style.background = '#ef4444';
             }
         });
-
-        // Dropdown change
-        document.getElementById('gemini-ui-model').addEventListener('change', (e) => {
-            this.selectedModel = e.target.value;
-            localStorage.setItem("gemini_selected_model", this.selectedModel);
-        });
-
-        // Auto-fetch if key exists
-        if (this.hasApiKey()) {
-            this.discoverModels().then(models => this._populateDropdown(models)).catch(console.error);
-        }
     }
 
-    _populateDropdown(models) {
-        const select = document.getElementById('gemini-ui-model');
-        if (!select) return;
-
-        select.innerHTML = models.map(m =>
-            `<option value="${m.name}" ${m.name === this.selectedModel ? 'selected' : ''}>${m.name}</option>`
-        ).join('');
+    _populateDropdownUI(models) {
+        // Just triggers the update logic if the panel is open
+        const searchInput = document.getElementById('gemini-search-input');
+        if (searchInput && document.getElementById('gemini-dropdown-list').classList.contains('show')) {
+            const listDiv = document.getElementById('gemini-dropdown-list');
+            listDiv.innerHTML = '';
+            models.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'gemini-dropdown-item';
+                item.textContent = m.name;
+                item.addEventListener('click', () => {
+                    searchInput.value = m.name;
+                    this.selectedModel = m.name;
+                    localStorage.setItem("gemini_selected_model", m.name);
+                    listDiv.classList.remove('show');
+                });
+                listDiv.appendChild(item);
+            });
+        }
     }
 }
 
